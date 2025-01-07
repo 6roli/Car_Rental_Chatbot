@@ -142,8 +142,8 @@ def process_secondary_input(user_input):
             response += f"\n{event['bookingAgent']['messages'][0].content}"
         if "recommendationAgent" in event:
             response += f"\n{event['recommendationAgent']['messages'].content}"
-        if 'search_node' in event:
-            response+= f"\n{event['search_node']['messages'][0].content}"
+        # if 'search_node' in event:
+        #     response+= f"\n{event['search_node']['messages'][0].content}"
 
     response += "\n\nIf you want to book a car, let us know!"
     response += "\nTo reset, send: 'reset'."
