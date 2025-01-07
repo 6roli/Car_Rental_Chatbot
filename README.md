@@ -1,4 +1,4 @@
-# UPC_Accenture_Chatbot
+# UPC__Chatbot
 
 1. Install requirements.txt
 2. Execute app.py
