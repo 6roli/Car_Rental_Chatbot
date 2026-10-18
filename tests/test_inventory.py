@@ -63,3 +63,10 @@ def test_validation_explains_every_problem():
 
     inverted = SearchCriteria(location="Madrid", start_date=TODAY + timedelta(days=5), end_date=TODAY + timedelta(days=1))
     assert any("before" in problem for problem in validate_criteria(inverted, TODAY, LAST_DAY))
+
+
+def test_a_weekend_in_any_city_has_enough_choice():
+    connection = create_inventory(TODAY, 180)
+    friday = TODAY + timedelta(days=(4 - TODAY.weekday()) % 7)
+    for city in LOCATIONS:
+        assert len(search_cars(connection, city, friday, friday + timedelta(days=2))) >= 5, city

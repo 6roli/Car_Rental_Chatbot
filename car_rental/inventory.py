@@ -64,7 +64,7 @@ class Car:
         )
 
 
-def create_inventory(today: date, days_ahead: int, cars_per_location_per_week: int = 6) -> sqlite3.Connection:
+def create_inventory(today: date, days_ahead: int, cars_per_location_per_week: int = 40) -> sqlite3.Connection:
     """Builds an in-memory database of fictional cars available from `today`."""
     generator = random.Random(today.toordinal())  # same fleet for the whole day
     connection = sqlite3.connect(":memory:", check_same_thread=False)

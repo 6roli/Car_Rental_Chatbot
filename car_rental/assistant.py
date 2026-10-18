@@ -82,9 +82,10 @@ class Assistant:
         cars = result.get("cars", [])
         criteria = result["criteria"]
         if not cars:
+            budget = " within that budget" if criteria.max_price_per_day else ""
             return (
-                f"No cars match in {criteria.location} for those dates. "
-                "Try other dates or another city, or send 'reset'."
+                f"No cars are available in {criteria.location}{budget} for those dates. "
+                "Try other dates, a higher budget or another city, or send 'reset'."
             )
         session.cars, session.stage = cars, "chat"
         return (
