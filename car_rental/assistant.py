@@ -64,9 +64,12 @@ class Assistant:
         return bool(self.settings.groq_api_key)
 
     def _graphs(self):
-        if self._chat_graph is None:
+        if self._search_graph is None or self._chat_graph is None:
             # Ask Groq once which models exist, then build both workflows together.
-            models = resolve_models(self.settings.groq_api_key, self.settings.main_model, self.settings.fast_model)
+            api_key = self.settings.groq_api_key
+            if not api_key:
+                raise RuntimeError("Falta configurar GROQ_API_KEY")
+            models = resolve_models(api_key, self.settings.main_model, self.settings.fast_model)
             search_graph = build_search_graph(self.settings, models, self.inventory.connection)
             chat_graph = build_chat_graph(self.settings, models, make_tools(self.settings))
             self.models, self._search_graph, self._chat_graph = models, search_graph, chat_graph
