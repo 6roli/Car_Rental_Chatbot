@@ -77,3 +77,12 @@ def test_search_summary_repeats_what_was_understood():
 
     criteria = SearchCriteria(location="barcelona", start_date=date(2026, 10, 23), end_date=date(2026, 10, 25), max_price_per_day=60)
     assert describe_search(criteria) == "Searching Barcelona, Fri 23 Oct 2026 to Sun 25 Oct 2026, up to €60/day"
+
+
+def test_calendar_lists_weekdays_from_today():
+    from car_rental.agents import calendar
+
+    lines = calendar(TODAY, days=8).splitlines()
+    assert lines[0] == "- Sunday 2026-10-18"
+    assert "- Saturday 2026-10-24" in lines
+    assert len(lines) == 8
