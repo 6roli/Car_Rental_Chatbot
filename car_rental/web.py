@@ -47,7 +47,14 @@ def home():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "configured": assistant.configured, "active_sessions": len(assistant.sessions)}
+    models = assistant.models
+    return {
+        "status": "ok",
+        "configured": assistant.configured,
+        "active_sessions": len(assistant.sessions),
+        # Known after the first chat message (models are chosen lazily).
+        "models": {"main": models.main, "fast": models.fast} if models else None,
+    }
 
 
 @app.post("/chat")
@@ -79,6 +86,12 @@ def _friendly_error(error: Exception):
     if name == "RateLimitError" or "rate limit" in str(error).lower():
         log.warning("Groq rate limit reached: %s", error)
         return jsonify(error="The AI service is busy or today's free quota is used up. Please try again in a few minutes."), 503
+    if name in {"AuthenticationError", "PermissionDeniedError"}:
+        log.error("Groq rejected the API key: %s", error)
+        return jsonify(error="The demo's AI key was rejected. The owner has been notified in the server logs."), 503
+    if name == "NotFoundError":
+        log.error("Groq model not found: %s", error)
+        return jsonify(error="The AI model used by this demo is no longer available. It will be updated soon."), 503
     if name in {"APITimeoutError", "APIConnectionError"}:
         log.warning("Groq unreachable: %s", error)
         return jsonify(error="The AI service did not answer in time. Please try again."), 503

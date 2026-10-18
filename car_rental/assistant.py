@@ -7,6 +7,7 @@ from datetime import date, datetime, timedelta
 from .agents import availability_window, build_chat_graph, build_search_graph, format_cars, make_tools
 from .config import Settings
 from .inventory import create_inventory
+from .models import ModelChoice, resolve_models
 from .sessions import RateLimiter, Session, SessionStore
 
 log = logging.getLogger(__name__)
@@ -46,15 +47,19 @@ class Assistant:
         # Graphs are built lazily so the web page still loads without an API key.
         self._search_graph = None
         self._chat_graph = None
+        self.models: ModelChoice | None = None
 
     @property
     def configured(self) -> bool:
         return bool(self.settings.groq_api_key)
 
     def _graphs(self):
-        if self._search_graph is None:
-            self._search_graph = build_search_graph(self.settings, self.inventory.connection)
-            self._chat_graph = build_chat_graph(self.settings, make_tools(self.settings))
+        if self._chat_graph is None:
+            # Ask Groq once which models exist, then build both workflows together.
+            models = resolve_models(self.settings.groq_api_key, self.settings.main_model, self.settings.fast_model)
+            search_graph = build_search_graph(self.settings, models, self.inventory.connection)
+            chat_graph = build_chat_graph(self.settings, models, make_tools(self.settings))
+            self.models, self._search_graph, self._chat_graph = models, search_graph, chat_graph
         return self._search_graph, self._chat_graph
 
     def reply(self, session: Session, message: str, now: datetime | None = None) -> str:
