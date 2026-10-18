@@ -26,9 +26,9 @@ def _int(name: str, default: int) -> int:
 class Settings:
     groq_api_key: str | None
     tavily_api_key: str | None
-    # Larger model for reasoning (recommendations, booking); small one for routing and extraction.
-    main_model: str
-    fast_model: str
+    # Optional fixed models; when empty the app picks available ones (see models.py).
+    main_model: str | None
+    fast_model: str | None
     flask_secret_key: str
     # Abuse protection for the public demo (in memory; resets when the server restarts).
     messages_per_session_per_hour: int
@@ -43,8 +43,8 @@ def load_settings() -> Settings:
     return Settings(
         groq_api_key=os.getenv("GROQ_API_KEY") or None,
         tavily_api_key=os.getenv("TAVILY_API_KEY") or None,
-        main_model=os.getenv("GROQ_MAIN_MODEL", "llama-3.3-70b-versatile"),
-        fast_model=os.getenv("GROQ_FAST_MODEL", "llama-3.1-8b-instant"),
+        main_model=os.getenv("GROQ_MAIN_MODEL") or None,
+        fast_model=os.getenv("GROQ_FAST_MODEL") or None,
         # A random key per start is fine for a demo: sessions simply restart with the server.
         flask_secret_key=os.getenv("FLASK_SECRET_KEY") or os.urandom(32).hex(),
         messages_per_session_per_hour=_int("MESSAGES_PER_SESSION_PER_HOUR", 20),

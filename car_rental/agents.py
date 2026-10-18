@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field
 
 from .config import Settings
 from .inventory import LOCATIONS, Car, match_location, search_cars
+from .models import ModelChoice, model_options
 
 # --------------------------------------------------------------------------- models
 
@@ -36,7 +37,9 @@ def make_llm(settings: Settings, model: str) -> ChatGroq:
     if not settings.groq_api_key:
         raise RuntimeError("GROQ_API_KEY is not set")
     # One retry only: on a rate limit we prefer telling the visitor quickly.
-    return ChatGroq(model=model, temperature=0, api_key=settings.groq_api_key, max_retries=1, timeout=45)
+    return ChatGroq(
+        model=model, temperature=0, api_key=settings.groq_api_key, max_retries=1, timeout=45, **model_options(model)
+    )
 
 
 # --------------------------------------------------------------------- 1. search
@@ -67,9 +70,9 @@ If only one day is given, use it as both start and end. Leave fields empty when 
 Known pickup cities: {locations}."""
 
 
-def build_search_graph(settings: Settings, connection_provider):
+def build_search_graph(settings: Settings, models: ModelChoice, connection_provider):
     """`connection_provider()` returns today's inventory connection."""
-    extractor = make_llm(settings, settings.fast_model).with_structured_output(SearchCriteria)
+    extractor = make_llm(settings, models.fast).with_structured_output(SearchCriteria)
 
     def extract_criteria(state: SearchState) -> SearchState:
         today = state["today"]
@@ -165,9 +168,9 @@ Available cars:
 {car_list}"""
 
 
-def build_chat_graph(settings: Settings, tools: list[BaseTool]):
-    router = make_llm(settings, settings.fast_model).with_structured_output(Route)
-    main_llm = make_llm(settings, settings.main_model)
+def build_chat_graph(settings: Settings, models: ModelChoice, tools: list[BaseTool]):
+    router = make_llm(settings, models.fast).with_structured_output(Route)
+    main_llm = make_llm(settings, models.main)
     recommender = main_llm.bind_tools(tools) if tools else main_llm
     tool_hint = (
         "If the user asks about the weather at the destination, you may use the web search tool once."

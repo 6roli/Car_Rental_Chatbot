@@ -52,3 +52,15 @@ def test_security_headers_and_health(client):
     response = client.get("/health")
     assert response.get_json()["status"] == "ok"
     assert "default-src 'self'" in response.headers["Content-Security-Policy"]
+
+
+def test_missing_model_and_bad_key_have_clear_messages(client, monkeypatch):
+    for name, expected in [("NotFoundError", "no longer available"), ("AuthenticationError", "key was rejected")]:
+        error_class = type(name, (Exception,), {})
+
+        def fail(session, message, error_class=error_class):
+            raise error_class("boom")
+
+        monkeypatch.setattr(web.assistant, "reply", fail)
+        response = client.post("/chat", json={"message": "hi"})
+        assert response.status_code == 503 and expected in response.get_json()["error"]

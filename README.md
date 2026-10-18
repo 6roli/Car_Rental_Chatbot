@@ -20,15 +20,15 @@ go through a simulated booking.
 Visitor message
    │
    ├─ stage "search" ── Search workflow (LangGraph)
-   │      extract_criteria  (LLM, small model)  → city, dates, max price as structured data
+   │      extract_criteria  (LLM, fast model)  → city, dates, max price as structured data
    │      check_criteria    (Python)            → clear messages for missing or invalid data
    │      search_inventory  (Python + SQLite)   → parameterised query, cheapest first
    │
    └─ stage "chat" ──── Conversation workflow (LangGraph, memory per visitor)
-          supervisor        (LLM, small model)  → routes to one of:
-          recommendation    (LLM, large model)  → advice using only the cars found
+          supervisor        (LLM, fast model)  → routes to one of:
+          recommendation    (LLM, main model)  → advice using only the cars found
              └─ tools       (optional Tavily web search, for weather questions)
-          booking           (LLM, large model)  → simulated booking, reminds to use fake data
+          booking           (LLM, main model)  → simulated booking, reminds to use fake data
 ```
 
 The language model only does what needs language understanding. Validation, the SQL query and the car list are
@@ -39,7 +39,7 @@ message uses less of the free quota.
 
 | Original (`v0-original`) | Now |
 |---|---|
-| Model `mixtral-8x7b-32768` (retired by Groq) | `llama-3.3-70b-versatile` and `llama-3.1-8b-instant`, configurable |
+| Model `mixtral-8x7b-32768` (retired by Groq) | Models chosen automatically from those the Groq account offers (currently `openai/gpt-oss-120b` and `openai/gpt-oss-20b`); can be forced with env vars |
 | Database with dates only up to 31 Dec 2025 | Synthetic fleet generated daily, available from today for 180 days |
 | City list in the validator did not match the database | Cities come from one list shared by data and validation |
 | LLM wrote SQL and formatted results | Python builds a parameterised query and formats results |
@@ -47,7 +47,7 @@ message uses less of the free quota.
 | No limits | Per-visitor (20/hour) and global (300/day) message limits; friendly errors when Groq's quota runs out |
 | 143 pinned packages in a UTF-16 `requirements.txt` | 7 direct dependencies in `pyproject.toml` |
 | API keys committed in early history | Keys only in `.env` (ignored) or Render secrets |
-| No tests | 17 pytest tests (data, validation, sessions, limits, web API) |
+| No tests | 23 pytest tests (data, validation, sessions, limits, model choice, web API) |
 
 ## Project layout
 
@@ -56,6 +56,7 @@ car_rental/
   config.py       Settings from environment variables (.env locally, secrets on Render)
   inventory.py    Synthetic fleet (SQLite in memory) and the parameterised search
   agents.py       LangGraph workflows, prompts and structured outputs
+  models.py       Picks Groq models the account can use (Groq retires models regularly)
   assistant.py    One message in → one reply out, per visitor stage
   sessions.py     Per-visitor sessions and usage limits
   web.py          Flask app: page, /chat API, /health, security headers
@@ -73,7 +74,7 @@ pyproject.toml    Dependencies and project metadata
 | **Python 3.13** | Your computer and Render | Language of the whole app |
 | **LangGraph** | Server | Defines the agents and how messages flow between them; keeps memory per conversation |
 | **LangChain + langchain-groq** | Server | Common interface to the language model, structured outputs, tools |
-| **Groq** | Groq's cloud | Runs the open models (Llama 3) very fast; free tier with daily limits |
+| **Groq** | Groq's cloud | Runs open models (currently OpenAI's open-weight gpt-oss) very fast; free tier with daily limits |
 | **Tavily** (optional) | Tavily's cloud | Web search for weather questions |
 | **SQLite** | Server memory | Small database for the fictional fleet |
 | **Flask + gunicorn** | Server | Web page and JSON API; gunicorn is the production web server |
