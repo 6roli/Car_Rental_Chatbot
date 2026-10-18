@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta
 
 from .agents import availability_window, build_chat_graph, build_search_graph, format_cars, make_tools
 from .config import Settings
-from .inventory import create_inventory
+from .inventory import create_inventory, match_location
 from .models import ModelChoice, resolve_models
 from .sessions import RateLimiter, Session, SessionStore
 
@@ -18,6 +18,16 @@ WELCOME = (
     "Hi! Tell me where and when you need a car, for example: "
     "'Barcelona from next Friday to Sunday' or 'a cheap car in Sevilla in December'."
 )
+
+
+def describe_search(criteria) -> str:
+    """Repeats what was understood, so the visitor can spot a misread date."""
+    end = criteria.end_date or criteria.start_date
+    dates = criteria.start_date.strftime("%a %d %b %Y")
+    if end != criteria.start_date:
+        dates += " to " + end.strftime("%a %d %b %Y")
+    budget = f", up to €{criteria.max_price_per_day:g}/day" if criteria.max_price_per_day else ""
+    return f"Searching {match_location(criteria.location)}, {dates}{budget}"
 
 
 class Inventory:
@@ -89,7 +99,7 @@ class Assistant:
             )
         session.cars, session.stage = cars, "chat"
         return (
-            f"Found {len(cars)} cars (cheapest first):\n{format_cars(cars)}\n\n"
+            f"{describe_search(criteria)}: found {len(cars)} cars (cheapest first):\n{format_cars(cars)}\n\n"
             "Ask me for a recommendation (e.g. 'which is best for a family?') or say which one you want to book. "
             "Send 'reset' to search again."
         )

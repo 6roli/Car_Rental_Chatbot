@@ -70,3 +70,10 @@ def test_a_weekend_in_any_city_has_enough_choice():
     friday = TODAY + timedelta(days=(4 - TODAY.weekday()) % 7)
     for city in LOCATIONS:
         assert len(search_cars(connection, city, friday, friday + timedelta(days=2))) >= 5, city
+
+
+def test_search_summary_repeats_what_was_understood():
+    from car_rental.assistant import describe_search
+
+    criteria = SearchCriteria(location="barcelona", start_date=date(2026, 10, 23), end_date=date(2026, 10, 25), max_price_per_day=60)
+    assert describe_search(criteria) == "Searching Barcelona, Fri 23 Oct 2026 to Sun 25 Oct 2026, up to €60/day"
