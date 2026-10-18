@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Car rental chatbot — demo</title>
+    <meta name="description" content="Multi-agent car rental assistant built with LangGraph and Groq. Portfolio demo with a fictional fleet." />
+    <link rel="stylesheet" href="{{ url_for('static', filename='chat.css') }}" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="container header__inner">
+        <div>
+          <p class="name">Car rental chatbot</p>
+          <p class="muted small">Multi-agent assistant · LangGraph + Groq</p>
+        </div>
+        <a class="back" href="{{ portfolio_url }}">← Portfolio</a>
+      </div>
+    </header>
+
+    <main class="container">
+      <p class="notice" role="note">
+        <strong>Demo.</strong> The fleet is fictional and no real booking is made. Please don't enter real
+        personal data. Messages are sent to Groq to generate answers and are not stored by this demo.
+      </p>
+
+      {% if not configured %}
+      <p class="error" role="alert">The demo is not configured yet: the server has no API key.</p>
+      {% endif %}
+
+      <section id="chat" class="chat" aria-live="polite" aria-label="Conversation">
+        <div class="message message--bot">{{ welcome }}</div>
+      </section>
+
+      <div class="suggestions" aria-label="Examples">
+        <button type="button" data-example="Barcelona from next Friday to Sunday">Barcelona next weekend</button>
+        <button type="button" data-example="A cheap car in Sevilla next week, under 50 euros a day">Cheap car in Sevilla</button>
+        <button type="button" data-example="reset">Start over</button>
+      </div>
+
+      <form id="form" class="form">
+        <label class="visually-hidden" for="input">Your message</label>
+        <input id="input" name="message" autocomplete="off" maxlength="500" placeholder="Where and when do you need a car?" required />
+        <button id="send" type="submit">Send</button>
+      </form>
+      <p class="muted small">
+        The server sleeps when nobody uses it; the first answer can take up to a minute.
+      </p>
+    </main>
+
+    <script src="{{ url_for('static', filename='chat.js') }}"></script>
+  </body>
+</html>

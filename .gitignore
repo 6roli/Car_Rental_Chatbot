@@ -1,7 +1,19 @@
+# Secrets — never commit
 .env
-app_pyqt.py
-app_tkinter.py
-carRental_database.db
-demo_prueba.db
-server.py
+.env.*
+!.env.example
+
+# Python
+.venv/
 __pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Databases are generated at runtime
+*.db
+
+.DS_Store
+Thumbs.db
