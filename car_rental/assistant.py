@@ -4,7 +4,9 @@ import logging
 import threading
 from datetime import date, datetime, timedelta
 
-from .agents import availability_window, build_chat_graph, build_search_graph, format_cars, make_tools
+from langchain_core.messages import HumanMessage
+
+from .agents import ChatState, SearchState, availability_window, build_chat_graph, build_search_graph, format_cars, make_tools
 from .config import Settings
 from .inventory import create_inventory, match_location
 from .models import ModelChoice, resolve_models
@@ -87,9 +89,10 @@ class Assistant:
 
     def _search(self, session: Session, message: str, today: date) -> str:
         search_graph, _ = self._graphs()
-        result = search_graph.invoke(
-            {"message": message, "today": today, "last_day": availability_window(today, self.settings)}
-        )
+        search_input: SearchState = {
+            "message": message, "today": today, "last_day": availability_window(today, self.settings)
+        }
+        result = search_graph.invoke(search_input)
         if result.get("problems"):
             return "I need a bit more information:\n" + "\n".join(f"• {p}" for p in result["problems"])
         cars = result.get("cars", [])
@@ -109,8 +112,11 @@ class Assistant:
 
     def _chat(self, session: Session, message: str) -> str:
         _, chat_graph = self._graphs()
+        chat_input: ChatState = {
+            "messages": [HumanMessage(content=message)], "car_list": format_cars(session.cars)
+        }
         state = chat_graph.invoke(
-            {"messages": [("user", message)], "car_list": format_cars(session.cars)},
+            chat_input,
             {"configurable": {"thread_id": session.thread_id}},
         )
         return str(state["messages"][-1].content).strip() or "Sorry, I have no answer for that. Could you rephrase it?"
