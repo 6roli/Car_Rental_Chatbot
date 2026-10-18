@@ -15,7 +15,7 @@ Every visitor has their own LangGraph thread, so conversations never mix.
 """
 
 from datetime import date, timedelta
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal, NotRequired, TypedDict
 
 from langchain_core.messages import AnyMessage, SystemMessage
 from langchain_core.tools import BaseTool
@@ -24,7 +24,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 from .config import Settings
 from .inventory import LOCATIONS, Car, match_location, search_cars
@@ -38,7 +38,7 @@ def make_llm(settings: Settings, model: str) -> ChatGroq:
         raise RuntimeError("GROQ_API_KEY is not set")
     # One retry only: on a rate limit we prefer telling the visitor quickly.
     return ChatGroq(
-        model=model, temperature=0, api_key=settings.groq_api_key, max_retries=1, timeout=45, **model_options(model)
+        model=model, temperature=0, api_key=SecretStr(settings.groq_api_key), max_retries=1, timeout=45, **model_options(model)
     )
 
 
@@ -54,13 +54,20 @@ class SearchCriteria(BaseModel):
     max_price_per_day: float | None = Field(None, description="Maximum price per day in euros, if mentioned")
 
 
-class SearchState(TypedDict, total=False):
+class SearchInput(TypedDict):
     message: str
     today: date
     last_day: date
+
+
+class SearchUpdate(TypedDict, total=False):
     criteria: SearchCriteria
     problems: list[str]
     cars: list[Car]
+
+
+class SearchState(SearchInput, SearchUpdate):
+    pass
 
 
 EXTRACTION_PROMPT = """You extract car rental search criteria from the user's message.
@@ -83,22 +90,32 @@ def build_search_graph(settings: Settings, models: ModelChoice, connection_provi
     """`connection_provider()` returns today's inventory connection."""
     extractor = make_llm(settings, models.fast).with_structured_output(SearchCriteria)
 
-    def extract_criteria(state: SearchState) -> SearchState:
+    def extract_criteria(state: SearchState) -> SearchUpdate:
         today = state["today"]
         system = EXTRACTION_PROMPT.format(
             today=today.isoformat(), weekday=today.strftime("%A"), calendar=calendar(today), locations=", ".join(LOCATIONS)
         )
         criteria = extractor.invoke([SystemMessage(system), ("user", state["message"])])
+        if not isinstance(criteria, SearchCriteria):
+            raise TypeError("The extractor did not return SearchCriteria")
         return {"criteria": criteria}
 
-    def check_criteria(state: SearchState) -> SearchState:
-        return {"problems": validate_criteria(state["criteria"], state["today"], state["last_day"])}
+    def check_criteria(state: SearchState) -> SearchUpdate:
+        criteria = state.get("criteria")
+        if criteria is None:
+            raise RuntimeError("Search criteria have not been extracted")
+        return {"problems": validate_criteria(criteria, state["today"], state["last_day"])}
 
-    def search_inventory(state: SearchState) -> SearchState:
-        criteria = state["criteria"]
+    def search_inventory(state: SearchState) -> SearchUpdate:
+        criteria = state.get("criteria")
+        if criteria is None or criteria.start_date is None:
+            raise RuntimeError("Search criteria have not been validated")
+        location = match_location(criteria.location)
+        if location is None:
+            raise RuntimeError("The pickup city has not been validated")
         cars = search_cars(
             connection_provider(),
-            match_location(criteria.location),  # validated above
+            location,
             criteria.start_date,
             criteria.end_date or criteria.start_date,
             criteria.max_price_per_day,
@@ -148,7 +165,7 @@ def format_cars(cars: list[Car]) -> str:
 class ChatState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
     car_list: str
-    next: str
+    next: NotRequired[str]
 
 
 class Route(BaseModel):
@@ -193,6 +210,8 @@ def build_chat_graph(settings: Settings, models: ModelChoice, tools: list[BaseTo
 
     def supervisor(state: ChatState) -> dict:
         route = router.invoke([SystemMessage(SUPERVISOR_PROMPT), state["messages"][-1]])
+        if not isinstance(route, Route):
+            raise TypeError("The supervisor did not return Route")
         return {"next": route.next}
 
     def recommendation(state: ChatState) -> dict:
