@@ -67,7 +67,8 @@ EXTRACTION_PROMPT = """You extract car rental search criteria from the user's me
 Today is {today} ({weekday}). Resolve relative dates ("tomorrow", "next weekend", "in March")
 to exact dates on or after today. If only a month is given, use its first and last day.
 If only one day is given, use it as both start and end. Leave fields empty when not mentioned.
-Known pickup cities: {locations}."""
+Copy the city exactly as the user wrote it, even if it is not one of our pickup cities ({locations});
+another step checks it."""
 
 
 def build_search_graph(settings: Settings, models: ModelChoice, connection_provider):
