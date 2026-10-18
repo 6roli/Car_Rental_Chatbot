@@ -65,10 +65,18 @@ class SearchState(TypedDict, total=False):
 
 EXTRACTION_PROMPT = """You extract car rental search criteria from the user's message.
 Today is {today} ({weekday}). Resolve relative dates ("tomorrow", "next weekend", "in March")
-to exact dates on or after today. If only a month is given, use its first and last day.
+to exact dates on or after today, using this calendar instead of calculating:
+{calendar}
+"Next <weekday>" means the first such day after today in the calendar. "Weekend" means Saturday to Sunday.
+If only a month is given, use its first and last day.
 If only one day is given, use it as both start and end. Leave fields empty when not mentioned.
 Copy the city exactly as the user wrote it, even if it is not one of our pickup cities ({locations});
 another step checks it."""
+
+
+def calendar(today: date, days: int = 21) -> str:
+    """The next three weeks, one day per line. Small models misjudge weekdays; a lookup table avoids it."""
+    return "\n".join(f"- {(today + timedelta(days=i)).strftime('%A %Y-%m-%d')}" for i in range(days))
 
 
 def build_search_graph(settings: Settings, models: ModelChoice, connection_provider):
@@ -77,7 +85,9 @@ def build_search_graph(settings: Settings, models: ModelChoice, connection_provi
 
     def extract_criteria(state: SearchState) -> SearchState:
         today = state["today"]
-        system = EXTRACTION_PROMPT.format(today=today.isoformat(), weekday=today.strftime("%A"), locations=", ".join(LOCATIONS))
+        system = EXTRACTION_PROMPT.format(
+            today=today.isoformat(), weekday=today.strftime("%A"), calendar=calendar(today), locations=", ".join(LOCATIONS)
+        )
         criteria = extractor.invoke([SystemMessage(system), ("user", state["message"])])
         return {"criteria": criteria}
 
