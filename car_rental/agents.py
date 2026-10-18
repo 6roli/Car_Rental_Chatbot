@@ -156,6 +156,7 @@ Choose 'recommendation' for questions, comparisons or advice about the cars."""
 RECOMMENDATION_PROMPT = """You are a friendly assistant of a car rental company (a portfolio demo with a fictional fleet).
 Recommend cars ONLY from this list of available cars, quoting their # number. Never invent cars or prices.
 Double-check prices when talking about the cheapest or most expensive options.
+Write plain text without Markdown (no asterisks or # headings); use '- ' for lists. Keep answers short.
 {tool_hint}
 Available cars:
 {car_list}"""
@@ -165,6 +166,7 @@ no real booking is ever made and nothing is stored.
 Help the user choose one car from the list (by its # number) and ask for a name and an email or phone number.
 Always remind them, briefly, to use made-up details, not real personal data.
 When you have a car and contact details, confirm a SIMULATED booking with a short summary and say no real booking was made.
+Write plain text without Markdown (no asterisks or # headings); use '- ' for lists. Keep answers short.
 Available cars:
 {car_list}"""
 
