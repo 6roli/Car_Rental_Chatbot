@@ -68,3 +68,8 @@ main { padding-block: 1rem 2rem; }
 .form button:disabled { opacity: 0.6; cursor: wait; }
 
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* "How it works": the two rules the search depends on. */
+.howto { margin: 0.9rem 0; padding: 0.8rem 1rem 0.8rem 2.1rem; border: 1px solid var(--border, #d0d7de); border-radius: var(--radius); font-size: 0.93rem; line-height: 1.5; }
+.howto li + li { margin-top: 0.3rem; }
+.howto code { font-weight: 600; }

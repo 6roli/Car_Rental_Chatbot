@@ -28,6 +28,12 @@
       <p class="error" role="alert">The demo is not configured yet: the server has no API key.</p>
       {% endif %}
 
+      <ol class="howto" aria-label="How it works">
+        <li><strong>First message: where and when, together.</strong> A city and a date or day in the same message, e.g. “Valencia from 6 to 8 November”. The bot needs both to search the fleet.</li>
+        <li><strong>Then ask</strong> for a recommendation, or to book one of the cars it found.</li>
+        <li><strong>New city or dates?</strong> Send <code>reset</code> (or press “Start over”) and the agent searches the fleet again.</li>
+      </ol>
+
       <section id="chat" class="chat" aria-live="polite" aria-label="Conversation">
         <div class="message message--bot">{{ welcome }}</div>
       </section>
