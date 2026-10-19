@@ -17,8 +17,9 @@ log = logging.getLogger(__name__)
 RESET_WORDS = {"reset", "restart", "start over", "new search"}
 
 WELCOME = (
-    "Hi! Tell me where and when you need a car, for example: "
-    "'Barcelona from next Friday to Sunday' or 'a cheap car in Sevilla in December'."
+    "Hi! In your first message, tell me where AND when you need a car — a city and a date or day, "
+    "together — for example: 'Barcelona from next Friday to Sunday' or 'a cheap car in Sevilla on 6 December'. "
+    "To search another city or other dates later, send 'reset'."
 )
 
 
@@ -94,7 +95,11 @@ class Assistant:
         }
         result = search_graph.invoke(search_input)
         if result.get("problems"):
-            return "I need a bit more information:\n" + "\n".join(f"• {p}" for p in result["problems"])
+            return (
+                "I need a bit more information:\n"
+                + "\n".join(f"• {p}" for p in result["problems"])
+                + "\n\nPlease write the city and the dates together in one message."
+            )
         cars = result.get("cars", [])
         criteria = result["criteria"]
         if not cars:
@@ -107,7 +112,7 @@ class Assistant:
         return (
             f"{describe_search(criteria)}: found {len(cars)} cars (cheapest first):\n{format_cars(cars)}\n\n"
             "Ask me for a recommendation (e.g. 'which is best for a family?') or say which one you want to book. "
-            "Send 'reset' to search again."
+            "To search another city or other dates, send 'reset' first."
         )
 
     def _chat(self, session: Session, message: str) -> str:
