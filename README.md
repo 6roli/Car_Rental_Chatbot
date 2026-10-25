@@ -6,7 +6,7 @@ go through a simulated booking.
 
 | | |
 |---|---|
-| Live demo | *published on Render — URL added after the first deployment* |
+| Live demo | https://car-rental-chatbot.onrender.com (free server: the first answer can take up to a minute) |
 | Portfolio page | https://portfolio.gabriel-olius.workers.dev/projects/car-rental-chatbot/ |
 | Original version | tag [`v0-original`](https://github.com/6roli/Car_Rental_Chatbot/tree/v0-original) and branch `original` (kept unchanged) |
 | Cost | €0 (Render Free + Groq free tier, no payment methods) |
@@ -14,14 +14,26 @@ go through a simulated booking.
 > **Demo notice:** the fleet is randomly generated, no real booking is made, and visitors are asked not to enter
 > real personal data. Messages are sent to Groq to generate answers; this app does not store them.
 
+## Using the demo
+
+1. **First message: where and when, together** — a city and a date or day in the same message, e.g.
+   *"Valencia from 6 to 8 November"* or *"a cheap car in Sevilla next Friday"*. The bot repeats what it understood
+   ("Searching Valencia, Fri 06 Nov 2026 to Sun 08 Nov 2026") so a misread date is easy to spot.
+2. **Then ask** for a recommendation (*"which is best for a family?"*) or to book one of the cars it found.
+3. **New city or dates?** Send `reset` (or press *Start over*) and the search starts again.
+
+The same three rules are shown on the chat page.
+
 ## How it works
 
 ```
 Visitor message
    │
    ├─ stage "search" ── Search workflow (LangGraph)
-   │      extract_criteria  (LLM, fast model)  → city, dates, max price as structured data
+   │      extract_criteria  (LLM, fast model)  → city, dates, max price as structured data,
+   │                                             reading relative dates from a 3-week calendar
    │      check_criteria    (Python)            → clear messages for missing or invalid data
+   │                                             (unknown city, past dates, end before start…)
    │      search_inventory  (Python + SQLite)   → parameterised query, cheapest first
    │
    └─ stage "chat" ──── Conversation workflow (LangGraph, memory per visitor)
@@ -35,19 +47,24 @@ The language model only does what needs language understanding. Validation, the 
 plain Python, so the bot cannot invent cars, write a wrong query or format prices inconsistently — and each
 message uses less of the free quota.
 
+Small models misjudge weekdays ("next Friday"), so the extraction prompt includes the next three weeks as a lookup
+table instead of asking the model to calculate. The city is copied exactly as written and checked in Python against
+the pickup cities, so an unknown city gets a clear answer instead of a guess. Replies are plain text (no Markdown).
+
 ### What changed from the original
 
 | Original (`v0-original`) | Now |
 |---|---|
 | Model `mixtral-8x7b-32768` (retired by Groq) | Models chosen automatically from those the Groq account offers (currently `openai/gpt-oss-120b` and `openai/gpt-oss-20b`); can be forced with env vars |
-| Database with dates only up to 31 Dec 2025 | Synthetic fleet generated daily, available from today for 180 days |
+| Database with dates only up to 31 Dec 2025 | Synthetic fleet generated daily (40 cars per city per week), available from today for 180 days |
+| Model calculated relative dates (often wrong weekday) | Model reads them from a calendar in the prompt; the understood search is repeated to the visitor |
 | City list in the validator did not match the database | Cities come from one list shared by data and validation |
 | LLM wrote SQL and formatted results | Python builds a parameterised query and formats results |
 | Conversation state in global variables (visitors would mix) | One session and LangGraph thread per visitor |
 | No limits | Per-visitor (20/hour) and global (300/day) message limits; friendly errors when Groq's quota runs out |
 | 143 pinned packages in a UTF-16 `requirements.txt` | 7 direct dependencies in `pyproject.toml` |
 | API keys committed in early history | Keys only in `.env` (ignored) or Render secrets |
-| No tests | 23 pytest tests (data, validation, sessions, limits, model choice, web API) |
+| No tests | 26 pytest tests (data, validation, sessions, limits, model choice, web API) |
 
 ## Project layout
 
